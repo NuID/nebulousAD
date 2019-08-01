@@ -92,6 +92,8 @@ class DumpSecrets:
         self.__apiKey = kwargs.get('apiKey')
         self.__noBackup = kwargs.get('no_backup')
         self.__old_snaps = kwargs.get('old_snaps')
+        self.__systemDrive = os.environ['SystemDrive']
+        self.__workingDir = "{}\\Program Files\\NuID".format(self.__systemDrive)
 
         # Required but unused arguments for Impacket's secretsdump lib.
         # isRemote: False, History: True, noLMHash: True, remoteOps: None, useVSSMethod: True, justNTLM: True, pwdLastSet: False, resumeSession: None, outputFileName: None, justUser: None, printUserStatus: True
@@ -236,8 +238,7 @@ class DumpSecrets:
     def clean_old_snaps(self):
 
         now = datetime.datetime.now()
-        system_drive = os.environ['SystemDrive']
-        backup_path = "{}\\NuID\\snapshot-backups".format(system_drive)
+        backup_path = "{}\\snapshot-backups".format(self.__workingDir)
 
         if self.__shred:
 
@@ -280,7 +281,7 @@ class DumpSecrets:
     def csv_dump(self, csv_path):
         """
         Dumps the results toa CSV file at the specified path.
-        :param csv_path:
+        :param csv_path: the full path of the CSV file to ouptut.
         """
         logging.info("Dumping results to CSV file at: {}".format(csv_path))
 
@@ -360,8 +361,7 @@ class DumpSecrets:
                           "You can find this here: https://docs.microsoft.com/en-us/sysinternals/downloads/sdelete")
             sys.exit(1)
 
-        system_drive = os.environ['SystemDrive']
-        path = "{}\\NuID\\snapshot".format(system_drive)
+        path = "{}\\snapshot".format(self.__workingDir)
         if self.__snap:
 
             snapshot_files = [
@@ -390,13 +390,11 @@ class DumpSecrets:
     def snapshotActiveDirectory(self):
         """
         Uses ntdsutil.exe to automatically snapshot the SYSTEM registry hive and NTDS.dit file.
-        :return: Paths to where the snapshots are stored. Will always be %SYSTEM_DRIVE%\NuID\snapshot
+        :return: Paths to where the snapshots are stored. Will always be %SYSTEM_DRIVE%\Program Files\NuID\snapshot
         """
 
-        system_drive = os.environ['SystemDrive']
-        base_path = "{}\\NuID".format(system_drive)
-        snap_path = "{}\\snapshot".format(base_path)
-        backup_path = "{}\\snapshot-backups".format(base_path)
+        snap_path = "{}\\snapshot".format(self.__workingDir)
+        backup_path = "{}\\snapshot-backups".format(self.__workingDir)
         ad_path = "{}\\Active Directory".format(snap_path)
         reg_path = "{}\\registry".format(snap_path)
 
@@ -709,11 +707,11 @@ if __name__ == "__main__":
     parser.add_argument('-csv', action='store', help='Output results to CSV file at this PATH.')
     parser.add_argument('-json', action='store', help='Output results to JSON file at this PATH')
     parser.add_argument('-init-key', action='store', help="Install your Nu_I.D. API key to the current users PATH.")
-    parser.add_argument('-c', '--check', action='store_true', default=False,
+    parser.add_argument('-c', '-check', action='store_true', default=False,
                         help="Check against Nu_I.D. API for compromised credentials.{}".format(logger.Fore.LIGHTGREEN_EX))
     parser.add_argument('-snap', action='store_true', default=False,
                         help="{}Use ntdsutil.exe to snapshot the system registry hive and ntds.dit file to "
-                             "<systemDrive>:\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
+                             "<systemDrive>:\\Program Files\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
     parser.add_argument('-shred', action='store_true', default=False,
                         help="When performing delete operations on files, use a 7 pass overwrite with sdelete.exe. "
                              "Download here: https://docs.microsoft.com/en-us/sysinternals/downloads/sdelete")
