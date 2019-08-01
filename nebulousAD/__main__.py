@@ -518,13 +518,13 @@ class NuAPI:
     def __init__(self, apiKey, verbose):
 
         self.__apiKey = apiKey
-        self.__apiHeaders = {"X-NUID-API-KEY": self.__apiKey}  # set our API key in the header as required.
+        self.__apiHeaders = {"X-NUID-API-KEY": apiKey}  # set our API key in the header as required.
         self.__v = verbose
         self.__api = "https://nebulous.nuid.io"
         self.__secrets = None
         self.__evtLog = WindowsEventWriter()
-        # API route: https://nebulous.nuid.io/search/hash/sha2nt/<sha256(ntlm)>
-        self.__route_url = "{}/{}/{}/{}".format(self.__api, "search", "hash", "sha2nt")
+        # API route: https://nebulous.nuid.io/api/search/hash/NTLMSHA2/<sha256(ntlm)>
+        self.__route_url = "https://nebulous.nuid.io/api/search/hash/NTLMSHA2"
 
     @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
     def api_helper(self, user):
