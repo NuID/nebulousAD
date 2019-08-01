@@ -10,7 +10,7 @@ Run `git clone <publicGitRepo>`
 
 Next, install with `python setup.py install`
 
-Then initialize your key. You can get your key by visiting: https://nebulous.nuid.io/login
+Then initialize your key. You can get your key by visiting: https://nebulous.nuid.io/#/register
 Once registered, click the button to generate your API key and copy it.
 
 Now you can initialize them like so: `nebulousAD -init-key <api_key>`
@@ -64,7 +64,7 @@ If dumping manually you can point to the files with `-system path\to\SYSTEM` and
 
 #### -check
 
-This requires an API key from https://nebulous.nuid.io/login. Once you have that and installed with `-init-key`, you can check the hashes against the NuID API.
+This requires an API key from https://nebulous.nuid.io/#/register. Once you have that and installed with `-init-key`, you can check the hashes against the NuID API.
 If you have specified `-history` it will also check each accounts password history to see if there was a password the user previously used that was compromised.
 
 #### -user-status
