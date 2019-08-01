@@ -1,7 +1,13 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 DEPENDENCIES = open('requirements.txt', 'r').read().split('\n')
 README = open('README.md', 'r').read()
+
+packages = [
+    'nebulousAD',
+    'nebulousAD.modimpacket',
+    'nebulousAD.modimpacket.dcerpc'
+]
 
 setup(
     name='nebulousAD',
@@ -12,9 +18,10 @@ setup(
     author='Robert Paul',
     author_email='robert@nuid.io',
     url="http://github.com/NuID/nebulousAD/tree/master",
-    packages=['nebulousAD'],
+    packages=find_packages(),
+    include_package_data=True,
     entry_points={'console_scripts': ['nebulousAD=nebulousAD.__main__:main']},
-    install_requres=DEPENDENCIES,
+    install_requires=DEPENDENCIES,
     keywords=['security', 'network', 'hacking'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

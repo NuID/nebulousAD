@@ -673,7 +673,7 @@ def check_positive_int(n):
     return n
 
 
-if __name__ == "__main__":
+if __name__ == "nebulousAD.__main__":
 
     banner = """
  __  __                  ______       ____         
@@ -708,7 +708,8 @@ if __name__ == "__main__":
     parser.add_argument('-json', action='store', help='Output results to JSON file at this PATH')
     parser.add_argument('-init-key', action='store', help="Install your Nu_I.D. API key to the current users PATH.")
     parser.add_argument('-c', '-check', action='store_true', default=False,
-                        help="Check against Nu_I.D. API for compromised credentials.{}".format(logger.Fore.LIGHTGREEN_EX))
+                        help="Check against Nu_I.D. API for compromised credentials.{}".format(
+                            logger.Fore.LIGHTGREEN_EX))
     parser.add_argument('-snap', action='store_true', default=False,
                         help="{}Use ntdsutil.exe to snapshot the system registry hive and ntds.dit file to "
                              "<systemDrive>:\\Program Files\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
