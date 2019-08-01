@@ -3,12 +3,6 @@ from setuptools import setup, find_packages
 DEPENDENCIES = open('requirements.txt', 'r').read().split('\n')
 README = open('README.md', 'r').read()
 
-packages = [
-    'nebulousAD',
-    'nebulousAD.modimpacket',
-    'nebulousAD.modimpacket.dcerpc'
-]
-
 setup(
     name='nebulousAD',
     version='1.0.0',
