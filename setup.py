@@ -14,7 +14,7 @@ setup(
     url="http://github.com/NuID/nebulousAD/tree/master",
     packages=find_packages(),
     include_package_data=True,
-    entry_points={'console_scripts': ['nebulousAD=nebulousAD.__main__:main']},
+    entry_points={'console_scripts': ['nebulousAD=nebulousAD.nebulousAD:main']},
     install_requires=DEPENDENCIES,
     keywords=['security', 'network', 'hacking'],
     classifiers=[

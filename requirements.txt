@@ -37,6 +37,5 @@ pywin32-ctypes==0.2.0
 requests==2.22.0
 six==1.12.0
 tenacity==5.0.4
-tqdm==4.32.2
 urllib3==1.25.3
 Werkzeug==0.15.5

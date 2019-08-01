@@ -2133,7 +2133,7 @@ class NTDSHashes:
             if self.__history:
                 LMHistory = []
                 NTHistory = []
-                self.secrets_dict[userName.decode('utf-8')]["History"] = {} # create nested JSON
+                self.secrets_dict[userName.decode('utf-8')]["History"] = {}  # create nested JSON
                 if record[self.NAME_TO_INTERNAL['lmPwdHistory']] is not None:
                     encryptedLMHistory = self.CRYPTED_HISTORY(unhexlify(record[self.NAME_TO_INTERNAL['lmPwdHistory']]))
                     tmpLMHistory = self.__removeRC4Layer(encryptedLMHistory)
@@ -2163,11 +2163,13 @@ class NTDSHashes:
                         lmhash = hexlify(ntlm.LMOWFv1('', ''))
                     else:
                         lmhash = hexlify(LMHash)
+                    # Add NT History to Secrets Dict
                     self.secrets_dict[userName.decode('utf-8')]["History"]["history_{}".format(i)] = hexlify(NTHash)
                     answer = "%s_history%d:%s:%s:%s:::" % (userName, i, rid, lmhash, hexlify(NTHash))
                     if outputFile is not None:
                         self.__writeOutput(outputFile, answer + '\n')
                     self.__perSecretCallback(NTDSHashes.SECRET_TYPE.NTDS, answer)
+
         else:
             replyVersion = 'V%d' %record['pdwOutVersion']
             LOG.debug('Decrypting hash for user: %s' % record['pmsgOut'][replyVersion]['pNC']['StringName'][:-1])

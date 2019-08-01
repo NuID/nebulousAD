@@ -97,3 +97,11 @@ If you use Task Scheduler to make a daily audit, you can use this option like so
 If we detect an old snapshot, we back it up to `%SYSTEMDRIVE%\Program Files\NuID\snapshot-backups` by default.
 This is due to ntdsutil.exe requiring an empty directory. 
 If you want to disable this backup and just wipe the current snapshot, use this argument.
+
+## Known issues
+
+There seems to be a bug in impacket that doesn't allow the nthash to be extracted correctly.
+Avoid using the `-history` argument for now.
+
+https://github.com/SecureAuthCorp/impacket/issues/395
+https://github.com/SecureAuthCorp/impacket/issues/660

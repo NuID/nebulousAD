@@ -20,7 +20,6 @@ import csv
 import json
 import datetime
 import requests
-import tqdm
 import shutil
 # Import windows utils
 import win32gui
@@ -36,13 +35,14 @@ from multiprocessing import cpu_count
 from modimpacket.examples import logger
 from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_random
 from modimpacket.examples.secretsdump import LocalOperations, NTDSHashes
+from requests.exceptions import ReadTimeout
 
 
 class WindowsEventWriter:
 
     def __init__(self):
         # Define event identifiers
-        self.__EVT_APP_NAME = "credaudit.exe"
+        self.__EVT_APP_NAME = "nebulousAD.exe"
         self.__EVT_ID = 4141
         # Define App categories
         self.__Cat_OK_PASS = 1000
@@ -212,9 +212,19 @@ class DumpSecrets:
         logging.info("Found {} account hashes.".format(len(self.__secrets)))
 
         if self.__check:
-            pass
             api = NuAPI(self.__apiKey, self.__verbose)
             api.check_hashes(self.__secrets)
+            leaked = 0
+            for user in self.__secrets:
+
+                if self.__secrets[user]["Check"].get("Compromised"):
+                    leaked += 1
+            if leaked:
+                logging.warning(logger.Fore.LIGHTRED_EX + "{}/{} ".format(leaked, len(self.__secrets)) +
+                                "Accounts have leaked credentials!" + logger.Fore.RESET)
+            else:
+                logging.info(logger.Fore.LIGHTGREEN_EX + "No accounts found to have compromised credentials" +
+                             logger.Fore.RESET)
 
         if self.__csv:
             self.csv_dump(self.__csv)
@@ -392,6 +402,8 @@ class DumpSecrets:
         Uses ntdsutil.exe to automatically snapshot the SYSTEM registry hive and NTDS.dit file.
         :return: Paths to where the snapshots are stored. Will always be %SYSTEM_DRIVE%\Program Files\NuID\snapshot
         """
+        if not os.path.exists(self.__workingDir):
+            os.makedirs(self.__workingDir)
 
         snap_path = "{}\\snapshot".format(self.__workingDir)
         backup_path = "{}\\snapshot-backups".format(self.__workingDir)
@@ -436,7 +448,7 @@ class DumpSecrets:
         logging.info("Snapping SYSTEM registry hive and NTDS.dit file to {}".format(snap_path))
         logging.warning("Depending on the size of the files, this may take a moment.")
 
-        save = "ntdsutil.exe \"ac i ntds\" \"ifm\" \"create full {}\" q q".format(snap_path)
+        save = "ntdsutil.exe \"ac i ntds\" \"ifm\" \"create full \\\"{}\\\"\" q q".format(snap_path)
         CMD = subprocess.Popen(save, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 
         CMD.communicate()
@@ -518,7 +530,7 @@ class NuAPI:
     def __init__(self, apiKey, verbose):
 
         self.__apiKey = apiKey
-        self.__apiHeaders = {"X-NUID-API-KEY": apiKey}  # set our API key in the header as required.
+        self.__apiHeaders = {"X-NUID-API-KEY": self.__apiKey}  # set our API key in the header as required.
         self.__v = verbose
         self.__api = "https://nebulous.nuid.io"
         self.__secrets = None
@@ -538,7 +550,7 @@ class NuAPI:
         # Broilerplate the data for the Windows Event Log. Need to do this to redact the NT hashes from the log file.
         audit_data = {
             "accoutName": user,
-            "Status": self.__secrets[user]['Status'],
+            "Status": self.__secrets[user].get("Status"),
             "Check": {
                 "LastCheck": None,
                 "Which": [],
@@ -553,22 +565,24 @@ class NuAPI:
         audit_data['Check']['LastCheck'] = now
 
         if self.__v:
-            logging.info("Checking hash for account: {}".format(user))
+            logging.info(logger.Fore.LIGHTBLACK_EX + "Checking hash for account: {}".format(user,
+                                                                                            logger.Fore.RESET))
         try:
             # First we check the accounts active NTLM hash.
             nthash = self.__secrets[user]['NTLM_Hash']
             h.update(nthash)  # Calculate SHA256(NTLM)
             url = "{}/{}".format(self.__route_url, h.hexdigest())
-            resp = requests.get(url, headers=self.__apiHeaders)
-        except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError) as err:
-            logging.error("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
+            resp = requests.get(url, headers=self.__apiHeaders, timeout=60)
+
+        except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError, ReadTimeout) as err:
+            logging.warning("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
             raise APIRetryException
         except UnicodeDecodeError as unierr:
             logging.error("Malformated request URL. Did the hash decode correctly? Exiting. {}".format(unierr))
             exit(1)
 
         if resp.status_code == 200:
-            logging.warning(logger.Fore.LIGHTRED_EX + "Hash for account: {} is ACTIVE and COMPROMISED!".format(user) +
+            logging.warning(logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
                             logger.Fore.RESET)
 
             self.__secrets[user]["Check"]["Compromised"] = True
@@ -576,7 +590,8 @@ class NuAPI:
 
         elif resp.status_code == 404:
             if self.__v:
-                logging.info(logger.Fore.LIGHTCYAN_EX + "Hash for account: {} is OK.".format(user + logger.Fore.RESET))
+                logging.info(logger.Fore.LIGHTBLACK_EX + "Hash for account:"
+                                                         " {} is OK.{}".format(user,  logger.Fore.RESET))
             self.__secrets[user]["Check"]["Compromised"] = False
         elif resp.status_code == 429:
             logging.warning("We are being rate limited. Retrying request and throttling connection.")
@@ -596,6 +611,8 @@ class NuAPI:
         # Write our results and redacted data to the Windows event log.
         self.__evtLog.write_event(user, audit_data['Check']['Compromised'], audit_data)
 
+        return 0
+
     @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
     def check_history(self, user):
         """
@@ -613,22 +630,29 @@ class NuAPI:
             ntlm_hist = self.__secrets[user]["History"][nthistory]
             h.update(ntlm_hist)
 
+            if self.__v:
+
+                logging.info(logger.Fore.LIGHTBLACK_EX + "Checking {} for user: {}...".format(nthistory, user) +
+                             logger.Fore.RESET)
+
             try:
                 url = "{}/{}".format(self.__route_url, h.hexdigest())
-                resp = requests.get(url, headers=self.__apiHeaders)
-            except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError) as err:
-                logging.error("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
+                resp = requests.get(url, headers=self.__apiHeaders, timeout=60)
+            except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError, ReadTimeout) as err:
+                logging.warning("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
                 raise APIRetryException
             if resp.status_code == 200:
                 logging.warning(logger.Fore.RED + "Historic Hash {} for account: {} is INACTIVE and "
                                                   "COMPROMISED!".format(nthistory, user) + logger.Fore.RESET)
                 self.__secrets[user]["Check"]["Compromised"] = True
                 self.__secrets[user]["Check"]["Which"].append(nthistory)
+
             elif resp.status_code == 404:
                 if self.__v:
                     logging.info(
-                        logger.Fore.LIGHTBLACK_EX + "Historic hash for account: {} is OK.".format(user +
-                                                                                                  logger.Fore.RESET))
+                        logger.Fore.LIGHTBLACK_EX + "Historic hash {} for account:"
+                                                    " {} is OK. {}".format(nthistory, user, logger.Fore.RESET))
+
             elif resp.status_code == 429:
                 logging.warning("We are being rate limited. Retrying request and throttling connection.")
                 raise APIRetryException
@@ -647,8 +671,8 @@ class NuAPI:
             procs = cpu_count()
         p = Pool(processes=procs)
         logging.info("Checking a total of {} accounts for compromised credentials.".format(len(self.__secrets)))
-        for _ in tqdm.tqdm(p.imap_unordered(self.api_helper, self.__secrets), total=len(self.__secrets)):
-            pass
+
+        p.imap_unordered(self.api_helper, self.__secrets)
 
         p.close()
         p.join()
@@ -673,7 +697,7 @@ def check_positive_int(n):
     return n
 
 
-if __name__ == "nebulousAD.__main__":
+def main():
 
     banner = """
  __  __                  ______       ____         
@@ -707,7 +731,7 @@ if __name__ == "nebulousAD.__main__":
     parser.add_argument('-csv', action='store', help='Output results to CSV file at this PATH.')
     parser.add_argument('-json', action='store', help='Output results to JSON file at this PATH')
     parser.add_argument('-init-key', action='store', help="Install your Nu_I.D. API key to the current users PATH.")
-    parser.add_argument('-c', '-check', action='store_true', default=False,
+    parser.add_argument('-c', '--check', action='store_true', default=False,
                         help="Check against Nu_I.D. API for compromised credentials.{}".format(
                             logger.Fore.LIGHTGREEN_EX))
     parser.add_argument('-snap', action='store_true', default=False,
@@ -747,7 +771,7 @@ if __name__ == "nebulousAD.__main__":
         hashdump = DumpSecrets(ntds=args.ntds, system=args.system, user_status=args.user_status, json=args.json,
                                pwd_last_set=args.pwd_last_set, history=args.history, verbose=args.v, csv=args.csv,
                                shred=args.shred, check=args.check, snap=args.snap, no_backup=args.no_backup,
-                               old_snaps=args.clean_old_snaps)
+                               old_snaps=args.clean_old_snaps, apiKey=apiKey)
 
         hashdump.dump()
 
