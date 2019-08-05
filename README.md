@@ -6,7 +6,7 @@ Simply download the precompiled release (requires no python interpreter), or bui
 
 Requires Python2.7 (for now)
 
-Run `git clone <publicGitRepo>`
+Run `git clone git@github.com:NuID/nebulousAD.git`
 
 Next, install with `python setup.py install`
 
