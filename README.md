@@ -16,7 +16,7 @@ Once registered, click the button to generate your API key and copy it.
 Now you can initialize them like so: `nebulousAD -init-key <api_key>`
 
 You can now run the tool. If it can't find your API key, you may need to restart your terminal session. 
-The API key is stored in an environment variable.  
+The API key is stored in an environment variable. Logging out and back in also works.
 
 ### Usage
 Example to dump all hashes and check them against NuID's api:
