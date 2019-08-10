@@ -1,5 +1,11 @@
 NuID Active Directory Hashcheck Tool
 =================================
+### Coming releases:
+
+I will be adding a wiki, documentation, etc. soon. 
+Features:
+- Will be adding a redact-by-group feature that will not dump hashes or check against the api for accounts in specific groups (such as domain administrators).
+
 ### Installation
 
 Simply download the precompiled release (requires no python interpreter), or build from source:
