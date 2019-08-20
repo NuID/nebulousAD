@@ -10,7 +10,7 @@ setup(
     long_description=README,
     long_description_content_type='text/markdown',
     author='Robert Paul',
-    author_email='robert@nuid.io',
+    author_email='nebulous@nuid.io',
     url="http://github.com/NuID/nebulousAD/tree/master",
     packages=find_packages(),
     include_package_data=True,
