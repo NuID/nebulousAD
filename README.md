@@ -111,3 +111,7 @@ Avoid using the `-history` argument for now.
 
 https://github.com/SecureAuthCorp/impacket/issues/395
 https://github.com/SecureAuthCorp/impacket/issues/660
+
+## Have an issue?
+
+Contact us at nebulous@nuid.io
