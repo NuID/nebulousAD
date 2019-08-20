@@ -6,9 +6,9 @@
 #   \ \ \`\ \ \ \_\ \/\______\\_\ \__  __\ \ \_\ \__
 #    \ \_\ \_\ \____/\/______//\_____\/\_\\ \____/\_\
 #     \/_/\/_/\/___/          \/_____/\/_/ \/___/\/_/
-# Author: Robert Paul, robert@nuid.io
+# Author: Robert Paul, nebulous@nuid.io
 # Visit us: https://nuid.io/
-# Github: https://github.com/NuID/credaudit
+# Github: https://github.com/NuID/nebulousAD
 # Impacket CLI modified by NuID, Inc. for auditing Active Directory credentials for leaked passwords.
 import argparse
 import codecs
