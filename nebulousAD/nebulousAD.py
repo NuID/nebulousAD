@@ -94,6 +94,7 @@ class DumpSecrets:
         self.__old_snaps = kwargs.get('old_snaps')
         self.__systemDrive = os.environ['SystemDrive']
         self.__workingDir = "{}\\Program Files\\NuID".format(self.__systemDrive)
+        self.__kAnon = kwargs.get('kAnon')
 
         # Required but unused arguments for Impacket's secretsdump lib.
         # isRemote: False, History: True, noLMHash: True, remoteOps: None, useVSSMethod: True, justNTLM: True, pwdLastSet: False, resumeSession: None, outputFileName: None, justUser: None, printUserStatus: True
@@ -213,7 +214,7 @@ class DumpSecrets:
 
         if self.__check:
             api = NuAPI(self.__apiKey, self.__verbose)
-            api.check_hashes(self.__secrets)
+            api.check_hashes(self.__secrets, self.__kAnon)
             leaked = 0
             for user in self.__secrets:
 
@@ -536,7 +537,149 @@ class NuAPI:
         self.__secrets = None
         self.__evtLog = WindowsEventWriter()
         # API route: https://nebulous.nuid.io/api/search/hash/NTLMSHA2/<sha256(ntlm)>
-        self.__route_url = "https://nebulous.nuid.io/api/search/hash/NTLMSHA2"
+        self.__route_url = "{}/api/search/hash/NTLMSHA2".format(self.__api)
+        # API route: https://nebulous.nuid.io/api/search/kanon/<query>
+        self.__anon_url = "{}/api/search/kanon/".format(self.__api)
+
+    @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
+    def anon_api_helper(self, user):
+        """
+        Helper function for check_hashes(). Pass over an iterable of the users' keys in __secrets and feed it to this.
+        :param user: Pass in the username of the user to look up. This should be a key of __secrets we can use to lookup
+        the users information.
+        :return: None.
+        :raises: APIRetryException @ if the request fails for whatever reason.
+        """
+        # Broilerplate the data for the Windows Event Log. Need to do this to redact the NT hashes from the log file.
+        audit_data = {
+            "accoutName": user,
+            "Status": self.__secrets[user].get("Status"),
+            "Check": {
+                "LastCheck": None,
+                "Which": [],
+                "Compromised": None
+            }
+        }
+        h = sha256()
+
+        # Set the timestamps
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.__secrets[user]['Check']['LastCheck'] = now
+        audit_data['Check']['LastCheck'] = now
+
+        if self.__v:
+            logging.info(logger.Fore.LIGHTBLACK_EX + "Checking hash for account: {}".format(user,
+                                                                                            logger.Fore.RESET))
+        try:
+            # First we check the accounts active NTLM hash.
+            nthash = self.__secrets[user]['NTLM_Hash']
+            h.update(nthash)  # Calculate SHA256(NTLM)
+            digest = h.hexdigest() # Save this digest for comparison later.
+            url = "{}/{}".format(self.__anon_url, digest[0:5])
+            resp = requests.get(url, headers=self.__apiHeaders, timeout=60)
+
+        except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError, ReadTimeout) as err:
+            logging.warning("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
+            raise APIRetryException
+        except UnicodeDecodeError as unierr:
+            logging.error("Malformated request URL. Did the hash decode correctly? Exiting. {}".format(unierr))
+            exit(1)
+
+        if resp.status_code == 200:
+            logging.warning(logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
+                            logger.Fore.RESET)
+
+            for hit in resp.json().get('results'):
+
+                if hit == digest:
+                    logging.warning(
+                        logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
+                        logger.Fore.RESET)
+                    self.__secrets[user]["Check"]["Compromised"] = True
+                    self.__secrets[user]["Check"]["Which"].append("NTLM_Hash")
+                    break
+
+        elif resp.status_code == 404:
+            if self.__v:
+                logging.info(logger.Fore.LIGHTBLACK_EX + "Hash for account:"
+                                                         " {} is OK.{}".format(user,  logger.Fore.RESET))
+            self.__secrets[user]["Check"]["Compromised"] = False
+        elif resp.status_code == 429:
+            logging.warning("We are being rate limited. Retrying request and throttling connection.")
+            raise APIRetryException
+        elif resp.status_code == 500:
+            logging.error("API error. Retrying the request. Code: {}".format(resp.status_code))
+            raise APIRetryException
+
+        if self.__secrets[user].get("History"):
+            # Need to split this one up so we can retry each individual request. Should prevent log spam from retrying.
+            self.check_anon_history(user)
+            audit_data['Check']['Which'] = self.__secrets[user]['Check']['Which']
+
+        # Setup the data to be submitted to the audit log.
+        audit_data['Check']['Compromised'] = self.__secrets[user]['Check']['Compromised']
+        audit_data['Check']['Which'] = self.__secrets[user]['Check']['Which']
+        # Write our results and redacted data to the Windows event log.
+        self.__evtLog.write_event(user, audit_data['Check']['Compromised'], audit_data)
+
+        return 0
+
+    @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
+    def check_anon_history(self, user):
+        """
+        We split up check_history to its own function. This way if we get a failure when checking an old hash, it does
+        not restart the entire process. However, if we get a failure, it will restart all of the history over again.
+        :param user: Pass in the username of the user to look up. This should be a key of __secrets we can use to lookup
+        the users information.
+        :return: None.
+        :raises: APIRetryException @ if the request fails for whatever reason.
+        """
+        # TODO: Get better exception handling so we don't retry all histories if one fails or gets rate limited.
+        for nthistory in self.__secrets[user]["History"]:
+
+            h = sha256()
+            ntlm_hist = self.__secrets[user]["History"][nthistory]
+            h.update(ntlm_hist)
+            digest = h.hexdigest()
+
+            if self.__v:
+
+                logging.info(logger.Fore.LIGHTBLACK_EX + "Checking {} for user: {}...".format(nthistory, user) +
+                             logger.Fore.RESET)
+
+            try:
+                url = "{}/{}".format(self.__anon_url, digest[0:5])
+                resp = requests.get(url, headers=self.__apiHeaders, timeout=60)
+            except (requests.HTTPError, requests.ConnectTimeout, requests.ConnectionError, ReadTimeout) as err:
+                logging.warning("Had trouble connecting to the API. Will retry this request. ERR: {}".format(err))
+                raise APIRetryException
+
+            if resp.status_code == 200:
+                logging.warning(
+                    logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
+                    logger.Fore.RESET)
+
+                for hit in resp.json().get('results'):
+
+                    if hit == digest:
+                        logging.warning(logger.Fore.RED + "Historic Hash {} for account: {} is INACTIVE and "
+                                                          "COMPROMISED!".format(nthistory, user) + logger.Fore.RESET)
+                        self.__secrets[user]["Check"]["Compromised"] = True
+                        self.__secrets[user]["Check"]["Which"].append(nthistory)
+                        break
+
+            elif resp.status_code == 404:
+                if self.__v:
+                    logging.info(
+                        logger.Fore.LIGHTBLACK_EX + "Historic hash {} for account:"
+                                                    " {} is OK. {}".format(nthistory, user, logger.Fore.RESET))
+
+            elif resp.status_code == 429:
+                logging.warning("We are being rate limited. Retrying request and throttling connection.")
+                raise APIRetryException
+            elif resp.status_code == 500:
+                logging.error("API error. Retrying the request. Code: {}".format(resp.status_code))
+                raise APIRetryException
 
     @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
     def api_helper(self, user):
@@ -656,8 +799,11 @@ class NuAPI:
             elif resp.status_code == 429:
                 logging.warning("We are being rate limited. Retrying request and throttling connection.")
                 raise APIRetryException
+            elif resp.status_code == 500:
+                logging.error("API error. Retrying the request. Code: {}".format(resp.status_code))
+                raise APIRetryException
 
-    def check_hashes(self, secrets):
+    def check_hashes(self, secrets, kanon):
         """
         Feed this a secrets_dict from secretsdump.py and we can check against NuID's api if the hash exists.
         :param secrets: secrets_dict object from secretsdump.NTDSHashes().
@@ -671,8 +817,10 @@ class NuAPI:
             procs = cpu_count()
         p = Pool(processes=procs)
         logging.info("Checking a total of {} accounts for compromised credentials.".format(len(self.__secrets)))
-
-        p.imap_unordered(self.api_helper, self.__secrets)
+        if kanon:
+            p.imap_unordered(self.anon_api_helper, self.__secrets)
+        else:
+            p.imap_unordered(self.api_helper, self.__secrets)
 
         p.close()
         p.join()
@@ -734,6 +882,8 @@ def main():
     parser.add_argument('-c', '--check', action='store_true', default=False,
                         help="Check against Nu_I.D. API for compromised credentials.{}".format(
                             logger.Fore.LIGHTGREEN_EX))
+    parser.add_argument('-k', '--k-anon', action='store_true', default=False,
+                        help="Anonymize hash searches against the API using K-Anon.")
     parser.add_argument('-snap', action='store_true', default=False,
                         help="{}Use ntdsutil.exe to snapshot the system registry hive and ntds.dit file to "
                              "<systemDrive>:\\Program Files\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
@@ -770,8 +920,8 @@ def main():
     if (args.ntds and args.system) or args.snap:
         hashdump = DumpSecrets(ntds=args.ntds, system=args.system, user_status=args.user_status, json=args.json,
                                pwd_last_set=args.pwd_last_set, history=args.history, verbose=args.v, csv=args.csv,
-                               shred=args.shred, check=args.check, snap=args.snap, no_backup=args.no_backup,
-                               old_snaps=args.clean_old_snaps, apiKey=apiKey)
+                               shred=args.shred, check=args.check, kAnon=args.k_anon, snap=args.snap,
+                               no_backup=args.no_backup, old_snaps=args.clean_old_snaps, apiKey=apiKey)
 
         hashdump.dump()
 
