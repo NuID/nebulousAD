@@ -5,7 +5,7 @@ README = open('README.md', 'r').read()
 
 setup(
     name='nebulousAD',
-    version='1.0.0',
+    version='1.1.0',
     description='Python library and CLI for Checking AD hashes.',
     long_description=README,
     long_description_content_type='text/markdown',
