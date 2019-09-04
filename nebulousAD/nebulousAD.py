@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Special thanks to Impacket authors: https://github.com/SecureAuthCorp/impacket
 #  __  __                  ______       ____
 # /\ \/\ \                /\__  _\     /\  _`\
@@ -539,7 +540,7 @@ class NuAPI:
         # API route: https://nebulous.nuid.io/api/search/hash/NTLMSHA2/<sha256(ntlm)>
         self.__route_url = "{}/api/search/hash/NTLMSHA2".format(self.__api)
         # API route: https://nebulous.nuid.io/api/search/kanon/<query>
-        self.__anon_url = "{}/api/search/kanon/".format(self.__api)
+        self.__anon_url = "{}/api/search/kanon/NTLMSHA2".format(self.__api)
 
     @retry(retry=retry_if_exception_type(APIRetryException), stop=stop_after_attempt(10), wait=wait_random(10, 30))
     def anon_api_helper(self, user):
@@ -589,7 +590,7 @@ class NuAPI:
             logging.warning(logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
                             logger.Fore.RESET)
 
-            for hit in resp.json().get('results'):
+            for hit in resp.json()['data'].get('results'):
 
                 if hit == digest:
                     logging.warning(
@@ -659,7 +660,7 @@ class NuAPI:
                     logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
                     logger.Fore.RESET)
 
-                for hit in resp.json().get('results'):
+                for hit in resp.json()['data'].get('results'):
 
                     if hit == digest:
                         logging.warning(logger.Fore.RED + "Historic Hash {} for account: {} is INACTIVE and "
@@ -882,8 +883,8 @@ def main():
     parser.add_argument('-c', '--check', action='store_true', default=False,
                         help="Check against Nu_I.D. API for compromised credentials.{}".format(
                             logger.Fore.LIGHTGREEN_EX))
-    parser.add_argument('-k', '--k-anon', action='store_true', default=False,
-                        help="Anonymize hash searches against the API using K-Anon.")
+    parser.add_argument('-dk', '--disable-k-anon', action='store_false', default=True,
+                        help="Disable K-Anon hash searches against the API (speeds up the audit).")
     parser.add_argument('-snap', action='store_true', default=False,
                         help="{}Use ntdsutil.exe to snapshot the system registry hive and ntds.dit file to "
                              "<systemDrive>:\\Program Files\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
