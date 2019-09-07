@@ -3,12 +3,12 @@ NebulousAD
 ### Quicklinks
 
 
-[About](https://github.com/NuID/nebulousAD#about)
-[Future releases](https://github.com/NuID/nebulousAD#future-releases)
-[Instalation](https://github.com/NuID/nebulousAD#installation)
-[Usage](https://github.com/NuID/nebulousAD#usage)
-[API documentation](https://github.com/NuID/nebulousAD#nebulous-rest-api)
-[Known Issues](https://github.com/NuID/nebulousAD#known-issues)
+* [About](https://github.com/NuID/nebulousAD#about)
+* [Future releases](https://github.com/NuID/nebulousAD#future-releases)
+* [Instalation](https://github.com/NuID/nebulousAD#installation)
+* [Usage](https://github.com/NuID/nebulousAD#usage)
+* [API documentation](https://github.com/NuID/nebulousAD#nebulous-rest-api)
+* [Known Issues](https://github.com/NuID/nebulousAD#known-issues)
 
 ### About
 
