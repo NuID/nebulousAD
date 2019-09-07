@@ -18,7 +18,7 @@ The Nebulous database current holds over 2.5 billion unique hashes of breached p
 
 NebulousAD uses the k-anonymity model by default to preserve the privacy and security of passwords checked against the API. Only the first five characters of a SHA-2 hash are sent to the API. 
 
-The tool was originally released at BSides Las Vegas 2019. A video of the BSides presentation is [here.](https://www.youtube.com/watch?v=xJgUdNfWbE4&trk)
+The tool was originally released at BSides Las Vegas 2019. A video of the BSides presentation is [![here.](https://i.ytimg.com/vi/xJgUdNfWbE4/maxresdefault.jpg)](https://www.youtube.com/watch?v=xJgUdNfWbE4&trk)
 
 ### Future releases:
 
