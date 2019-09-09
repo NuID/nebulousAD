@@ -4,10 +4,10 @@ NebulousAD
 
 
 * [About](https://github.com/NuID/nebulousAD#about)
-* [Future releases](https://github.com/NuID/nebulousAD#future-releases)
-* [Instalation](https://github.com/NuID/nebulousAD#installation)
+* [Future Releases](https://github.com/NuID/nebulousAD#future-releases)
+* [Installation](https://github.com/NuID/nebulousAD#installation)
 * [Usage](https://github.com/NuID/nebulousAD#usage)
-* [API documentation](https://github.com/NuID/nebulousAD#nebulous-rest-api)
+* [Nebulous REST API](https://github.com/NuID/nebulousAD#nebulous-rest-api)
 * [Known Issues](https://github.com/NuID/nebulousAD#known-issues)
 
 ### About
@@ -18,9 +18,9 @@ The Nebulous database current holds over 2.5 billion unique hashes of breached p
 
 NebulousAD uses the k-anonymity model by default to preserve the privacy and security of passwords checked against the API. Only the first five characters of a SHA-2 hash are sent to the API. 
 
-The tool was originally released at BSides Las Vegas 2019. A video of the BSides presentation is [![here.](https://i.ytimg.com/vi/xJgUdNfWbE4/maxresdefault.jpg)](https://www.youtube.com/watch?v=xJgUdNfWbE4&trk)
+The tool was originally released at BSides Las Vegas 2019. A video of the BSides presentation is [here.](https://www.youtube.com/watch?v=xJgUdNfWbE4&trk)
 
-### Future releases:
+### Future Releases:
 
 Upcoming Features:
 - Redact-by-group. Allows you to omit hash checking for members of the specific AD group.
@@ -45,7 +45,7 @@ The API key is stored in an environment variable. Logging out and back in also w
 
 ### Usage
 An example command to dump all hashes and check them against the API:
-`nebulousAD.exe -v -snap -check`
+`nebulousAD.exe -v -snap --check`
 
 ```
 NuID Credential Auditing tool.
@@ -95,7 +95,7 @@ You can dump this manually using any variety of methods or the `ntdsutil.exe` to
 
 If dumping manually you can point to the files with `-system path\to\SYSTEM` and `-ntds path\to\ntds.dit`. This is useful if you want to audit old snapshots. 
 
-#### -check
+#### --check
 
 This requires an API key from https://nebulous.nuid.io/#/register. Once you have that and installed with `-init-key`, you can check the hashes against the NuID API.
 If you have specified `-history` it will also check each accounts password history to see if there was a password the user previously used that was compromised.
