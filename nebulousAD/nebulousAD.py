@@ -587,10 +587,8 @@ class NuAPI:
             exit(1)
 
         if resp.status_code == 200:
-            logging.warning(logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
-                            logger.Fore.RESET)
 
-            for hit in resp.json()['data'].get('results'):
+            for hit in resp.json()['data'].get('matches'):
 
                 if hit == digest:
                     logging.warning(
@@ -599,12 +597,15 @@ class NuAPI:
                     self.__secrets[user]["Check"]["Compromised"] = True
                     self.__secrets[user]["Check"]["Which"].append("NTLM_Hash")
                     break
+            if self.__secrets[user]["Check"]["Compromised"] is None:
+                self.__secrets[user]["Check"]["Compromised"] = False
+                if self.__v:
+                    logging.info(logger.Fore.LIGHTBLACK_EX + "Hash for account:"
+                                                             " {} is OK.{}".format(user, logger.Fore.RESET))
 
         elif resp.status_code == 404:
-            if self.__v:
-                logging.info(logger.Fore.LIGHTBLACK_EX + "Hash for account:"
-                                                         " {} is OK.{}".format(user,  logger.Fore.RESET))
-            self.__secrets[user]["Check"]["Compromised"] = False
+            logging.error("API error. Retrying the request. Code: {}".format(resp.status_code))
+            raise APIRetryException
         elif resp.status_code == 429:
             logging.warning("We are being rate limited. Retrying request and throttling connection.")
             raise APIRetryException
@@ -656,25 +657,24 @@ class NuAPI:
                 raise APIRetryException
 
             if resp.status_code == 200:
-                logging.warning(
-                    logger.Fore.LIGHTRED_EX + "CURRENT PASSWORD for account: {} is COMPROMISED!".format(user) +
-                    logger.Fore.RESET)
-
-                for hit in resp.json()['data'].get('results'):
+                for hit in resp.json()['data'].get('matches'):
 
                     if hit == digest:
-                        logging.warning(logger.Fore.RED + "Historic Hash {} for account: {} is INACTIVE and "
+                        logging.warning(logger.Fore.RED + "Historic hash {} for account: {} is INACTIVE and "
                                                           "COMPROMISED!".format(nthistory, user) + logger.Fore.RESET)
                         self.__secrets[user]["Check"]["Compromised"] = True
                         self.__secrets[user]["Check"]["Which"].append(nthistory)
                         break
 
-            elif resp.status_code == 404:
-                if self.__v:
-                    logging.info(
-                        logger.Fore.LIGHTBLACK_EX + "Historic hash {} for account:"
-                                                    " {} is OK. {}".format(nthistory, user, logger.Fore.RESET))
+                if self.__secrets[user]["Check"]["Compromised"] is None:
+                    self.__secrets[user]["Check"]["Compromised"] = False
+                    if self.__v:
+                        logging.info(logger.Fore.LIGHTBLACK_EX + "Historic hash for account:"
+                                                                 " {} is OK.{}".format(user, logger.Fore.RESET))
 
+            elif resp.status_code == 404:
+                logging.error("API error. Retrying the request. Code: {}".format(resp.status_code))
+                raise APIRetryException
             elif resp.status_code == 429:
                 logging.warning("We are being rate limited. Retrying request and throttling connection.")
                 raise APIRetryException
@@ -817,10 +817,12 @@ class NuAPI:
         else:
             procs = cpu_count()
         p = Pool(processes=procs)
-        logging.info("Checking a total of {} accounts for compromised credentials.".format(len(self.__secrets)))
+
         if kanon:
+            logging.info("Checking a total of {} accounts for compromised credentials with k-Anon".format(len(self.__secrets)))
             p.imap_unordered(self.anon_api_helper, self.__secrets)
         else:
+            logging.info("Checking a total of {} accounts for compromised credentials.".format(len(self.__secrets)))
             p.imap_unordered(self.api_helper, self.__secrets)
 
         p.close()
@@ -847,7 +849,7 @@ def check_positive_int(n):
 
 
 def main():
-
+    logger.init()
     banner = """
  __  __                  ______       ____         
 /\\ \\/\\ \\                /\\__  _\\     /\\  _`\\       
@@ -864,7 +866,6 @@ def main():
     # Init terminal colors
     print(logger.Fore.LIGHTGREEN_EX + banner + logger.Fore.RESET)
 
-    logger.init()
     logging.getLogger().setLevel(logging.INFO)  # Log level debug in Impacket is too spammy, force it to INFO.
     # Explicitly changing the stdout encoding format
     if sys.stdout.encoding is None:
@@ -880,11 +881,11 @@ def main():
     parser.add_argument('-csv', action='store', help='Output results to CSV file at this PATH.')
     parser.add_argument('-json', action='store', help='Output results to JSON file at this PATH')
     parser.add_argument('-init-key', action='store', help="Install your Nu_I.D. API key to the current users PATH.")
+    parser.add_argument('-dk', '--disable-k-anon', action='store_false', default=True,
+                        help="Disable K-Anon hash searches against the API (speeds up the audit).")
     parser.add_argument('-c', '--check', action='store_true', default=False,
                         help="Check against Nu_I.D. API for compromised credentials.{}".format(
                             logger.Fore.LIGHTGREEN_EX))
-    parser.add_argument('-dk', '--disable-k-anon', action='store_false', default=True,
-                        help="Disable K-Anon hash searches against the API (speeds up the audit).")
     parser.add_argument('-snap', action='store_true', default=False,
                         help="{}Use ntdsutil.exe to snapshot the system registry hive and ntds.dit file to "
                              "<systemDrive>:\\Program Files\\NuID\\{}".format(logger.Fore.GREEN, logger.Fore.RESET))
@@ -921,7 +922,7 @@ def main():
     if (args.ntds and args.system) or args.snap:
         hashdump = DumpSecrets(ntds=args.ntds, system=args.system, user_status=args.user_status, json=args.json,
                                pwd_last_set=args.pwd_last_set, history=args.history, verbose=args.v, csv=args.csv,
-                               shred=args.shred, check=args.check, kAnon=args.k_anon, snap=args.snap,
+                               shred=args.shred, check=args.check, kAnon=args.disable_k_anon, snap=args.snap,
                                no_backup=args.no_backup, old_snaps=args.clean_old_snaps, apiKey=apiKey)
 
         hashdump.dump()
