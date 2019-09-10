@@ -83,7 +83,7 @@ display options:
   -v                    Enable verbose mode.
 
 ```
-### --disable-k-anon
+#### --disable-k-anon
 
 Disables the k-anonymity hashcheck function. This is useful to speed up the search time, but will result in the full SHA-256(NTLM) hash being sent over to the API. We do not log or store hashes sent to the API.
 
