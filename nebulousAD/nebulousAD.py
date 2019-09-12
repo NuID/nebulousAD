@@ -930,3 +930,8 @@ def main():
     else:
         logging.info('Must specify both -ntds and -system, or -snap for dumping system hashes. Exiting.')
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    
+    main()
