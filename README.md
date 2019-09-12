@@ -43,6 +43,19 @@ Now you can initialize them like so: `nebulousAD -init-key <api_key>`
 You can now run the tool. If it can't find your API key, you may need to restart your terminal session. 
 The API key is stored in an environment variable. Logging out and back in also works.
 
+### Compiling Static Binary
+
+You can download the nebulousAD.exe file, for using without an interpreter [here.](https://github.com/NuID/nebulousAD/releases)
+Alternatively, you can compile the tool from source yourself:
+1. `pip install pyinstaller`
+2. `git clone https://github.com/NuID/nebulousAD.git`
+3. `cd nebulousAD`
+4. `pyinstaller --onefile nebulousAD.py`
+
+Pyinstaller will output the location of the compiled binary:
+
+![example](https://i.imgur.com/i1zFTaz.png)
+
 ### Usage
 An example command to dump all hashes and check them against the API:
 `nebulousAD.exe -v -snap --check`
