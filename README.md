@@ -31,7 +31,7 @@ Simply download the precompiled release (requires no python interpreter), or bui
 
 **This tool requires Python2.7 (for now).**
 
-Run `git clone git@github.com:NuID/nebulousAD.git`
+Run `git clone https://github.com/NuID/nebulousAD.git`
 
 Next, install with `python setup.py install`
 
