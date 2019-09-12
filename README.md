@@ -16,7 +16,7 @@ NebulousAD is a tool for auditing Active Directory user passwords against a data
 
 The Nebulous database current holds over 2.5 billion unique hashes of breached passwords.
 
-NebulousAD uses the k-anonymity model by default to preserve the privacy and security of passwords checked against the API. Only the first five characters of a SHA-2 hash are sent to the API. 
+NebulousAD uses the k-anonymity model by default to preserve the privacy and security of passwords checked against the API. Only the first five characters of a SHA-2 hash are sent to the API. You can read more about k-anon [here.](https://blog.nuid.io/nebulousad-v1-1-with-k-anonymity/)
 
 The tool was originally released at BSides Las Vegas 2019. A video of the BSides presentation is [here.](https://www.youtube.com/watch?v=xJgUdNfWbE4&trk)
 
