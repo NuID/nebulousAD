@@ -49,7 +49,7 @@ You can download the nebulousAD.exe file, for using without an interpreter [here
 Alternatively, you can compile the tool from source yourself:
 1. `pip install pyinstaller`
 2. `git clone https://github.com/NuID/nebulousAD.git`
-3. `cd nebulousAD`
+3. `cd .\nebulousAD\nebulousAD`
 4. `pyinstaller --onefile nebulousAD.py`
 
 Pyinstaller will output the location of the compiled binary:
