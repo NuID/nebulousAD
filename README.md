@@ -1,3 +1,15 @@
+# ⚠️ A Note to NebulousAD Users
+
+As of April 14th, NuID will no longer be hosting the NebulousAD API that this code communicates with. As a small team of developers, we've found it isn't feasible to actively support, monitor, and develop both the NebulousAD portal as well as our Authentication [Developer Portal](https://portal.nuid.io) effectively.
+
+The code for checking Active Directory passwords against a set of publicly breached authentication credentials will continue to live on in this repository, and we will be incorporating all the excellent feedback we've received through our experience with NebAD to provide a seamless password blacklisting service alongside our Authentication API in the coming months. So stay tuned!
+
+We appreciate your involvement and feedback in the past, and look forward to hearing from you in the future. Don't hesitate to reach out with questions regarding NebAD, NuID, or anything digital identity related.
+
+Bye for now!
+-the NuID team
+
+
 NebulousAD
 =================================
 ### Quicklinks
